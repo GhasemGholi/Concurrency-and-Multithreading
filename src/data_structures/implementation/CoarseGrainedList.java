@@ -68,16 +68,16 @@ public class CoarseGrainedList<T extends Comparable<T>> implements Sorted<T> {
     }
 
     public ArrayList<T> toArrayList() {
-        ArrayList<T> array = new ArrayList<>();
+        ArrayList<T> list = new ArrayList<>();
         if (this.head.next != null || this.head.data != null) {
             Node Head;
             for (Head = this.head; Head.next != null; Head = Head.next) {
-                array.add(Head.data);
+                list.add(Head.data);
             }
 
-            array.add(Head.data);
+            list.add(Head.data);
         }
-        return array;
+        return list;
     }
 
     private class Node {
