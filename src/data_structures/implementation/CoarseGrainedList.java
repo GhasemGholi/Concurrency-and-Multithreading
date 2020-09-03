@@ -6,14 +6,20 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class CoarseGrainedList<T extends Comparable<T>> implements Sorted<T> {
-    Node head;
+
+    // Init 'head' and 'lock'
+    volatile Node head; // All the threads can see the changes to the list.
     Lock lock = new ReentrantLock();
+
+    // TODO: Implement lock algorithm to prevent deadlock and
+    private void lockAlgorithm() {}
+
 
     public CoarseGrainedList() {
         head = new Node();
     }
 
-    public void add(T t) {
+    public synchronized void add(T t) {
         this.lock.lock();
         if (this.head.next == null && this.head.data == null) {
             this.head = new Node(t);
@@ -41,7 +47,7 @@ public class CoarseGrainedList<T extends Comparable<T>> implements Sorted<T> {
         this.lock.unlock();
     }
 
-    public void remove(T t) {
+    public synchronized void remove(T t) {
         this.lock.lock();
         if(this.head.next == null){
             this.head = new Node();
@@ -67,18 +73,19 @@ public class CoarseGrainedList<T extends Comparable<T>> implements Sorted<T> {
         this.lock.unlock();
     }
 
-    public ArrayList<T> toArrayList() {
+    public synchronized ArrayList<T> toArrayList() {
         ArrayList<T> list = new ArrayList<>();
         if (this.head.next != null || this.head.data != null) {
-            Node Head;
-            for (Head = this.head; Head.next != null; Head = Head.next) {
-                list.add(Head.data);
+            Node curr;
+            for (curr = this.head; curr.next != null; curr = curr.next) {
+                list.add(curr.data);
             }
 
-            list.add(Head.data);
+            list.add(curr.data);
         }
         return list;
     }
+
 
     private class Node {
         private CoarseGrainedList<T>.Node next;
@@ -86,7 +93,7 @@ public class CoarseGrainedList<T extends Comparable<T>> implements Sorted<T> {
 
         // multiple constructors
 
-        public Node(){
+        public Node() {
             this.next = null;
             this.data = null;
         }
