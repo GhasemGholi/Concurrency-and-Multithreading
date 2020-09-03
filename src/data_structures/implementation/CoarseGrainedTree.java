@@ -6,7 +6,8 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class CoarseGrainedTree<T extends Comparable<T>> implements Sorted<T> {
-    private Node node;
+    // Init 'node', 'tree', and 'lock'
+    private volatile Node node;
     private ArrayList<T> tree;
     private final Lock lock = new ReentrantLock();
 
@@ -14,12 +15,28 @@ public class CoarseGrainedTree<T extends Comparable<T>> implements Sorted<T> {
         this.node = null;
     }
 
-    public void add(T t) {
+    public synchronized void add(T t) {
         this.lock.lock();
         node = addToTree(t, node);
         this.lock.unlock();
     }
 
+    public synchronized void remove(T t) {
+        this.lock.lock();
+        node = removeNode(t, node);
+        this.lock.unlock();
+    }
+
+    public ArrayList<T> toArrayList() {
+        this.tree = new ArrayList<>();
+        this.traverse(node);
+        return this.tree;
+    }
+
+    // TODO: Implement lock algorithm to prevent deadlock and starvation
+    public void lockAlgorithm() {}
+
+    // HELPER FUNCTIONS
     public Node addToTree(T t, Node element) {
         if(element == null) return new Node(t);
         if (t.compareTo(element.data) < 0) {
@@ -29,12 +46,6 @@ public class CoarseGrainedTree<T extends Comparable<T>> implements Sorted<T> {
             element.right = addToTree(t, element.right);
         }
         return element;
-    }
-
-    public void remove(T t) {
-        this.lock.lock();
-        node = removeNode(t, node);
-        this.lock.unlock();
     }
 
     public Node removeSmallest(Node element) {
@@ -56,7 +67,7 @@ public class CoarseGrainedTree<T extends Comparable<T>> implements Sorted<T> {
         else if (element.right == null) {
             element = element.left;
         }
-        else{
+        else {
             element = removeSmallest(element.left);
             element.right = removeNode(element.data, element.right);
         }
@@ -64,19 +75,14 @@ public class CoarseGrainedTree<T extends Comparable<T>> implements Sorted<T> {
     }
 
     private void traverse(Node element) {
-        if(element != null){
+        if (element != null){
             this.traverse(element.left);
             this.tree.add(element.data);
             this.traverse(element.right);
         }
     }
 
-    public ArrayList<T> toArrayList() {
-        this.tree = new ArrayList<>();
-        this.traverse(node);
-        return this.tree;
-    }
-
+    // NODE
     private class Node {
         private final T data;
         private CoarseGrainedTree<T>.Node left;
