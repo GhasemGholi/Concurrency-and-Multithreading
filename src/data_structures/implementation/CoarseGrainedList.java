@@ -56,6 +56,7 @@ public class CoarseGrainedList<T extends Comparable<T>> implements Sorted<T> {
         }
         else if (this.head.data != null) {
             Node Head = this.head;
+            assert Head.data != null;
             if (t.compareTo(Head.data) == 0) {
                 this.head = this.head.next;
             } else {

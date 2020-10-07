@@ -1,6 +1,6 @@
 @echo off
 
-set ARGS=
+set ARGS= fgl
 
 :setupArgs
 if ""%1""=="""" goto doneStart
