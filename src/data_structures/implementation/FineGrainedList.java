@@ -7,91 +7,152 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class FineGrainedList<T extends Comparable<T>> implements Sorted<T> {
-    private Node head = new Node();
+    private volatile Node head = null;
+    private final Lock reentrantLock = new ReentrantLock();
 
     public void add(T t) {
-        Node pred = this.head;
-        pred.lock();
-        Node curr = pred.next;
+
+        // Condition: Add new node to empty list
+        this.reentrantLock.lock();
         try {
-            if(pred.data == null && pred.next == null){
+            if (this.head == null) {
                 this.head = new Node(t);
-            }
-            else {
-                assert pred.data != null;
-                if (t.compareTo(pred.data) < 0) {
-                    this.head = new Node(t, pred);
-                }
-                else {
-                    while(pred.next != null) {
-                        curr.lock();
-                        try {
-                            if (t.compareTo(curr.data) < 0) {
-                                pred.next = new Node(t, curr);
-                                return;
-                            }
-                        }
-                        finally {
-                            curr.unlock();
-                        }
-                    }
-                    pred.next = new Node(t, null);
-                }
+                return;
             }
         } finally {
+            this.reentrantLock.unlock();
+        }
+
+        // Condition: Add node to a list with one element
+        Node pred = this.head;
+        pred.lock();
+        try {
+            if (pred.next == null) {
+                Node newNode = new Node(t);
+                if (t.compareTo(pred.data) > 0) {
+                    pred.next = newNode;
+                }
+                else {
+                    newNode.next = pred;
+                    this.head = newNode;
+                }
+                return;
+            }
+        } finally {
+            pred.unlock();
+        }
+
+        // Condition: Add node to a list with two or more elem
+        pred = this.head;
+        pred.lock();
+        try {
+            Node curr = pred.next;
+            curr.lock();
+            try {
+                while (t.compareTo(curr.data) > 0) {
+                    pred.unlock();
+                    pred = curr;
+                    curr = curr.next;
+                    curr.lock();
+                }
+                if (t.compareTo(curr.data) == 0) { // If element already containts, return
+                    return;
+                }
+
+                Node newNode = new Node(t);
+                if (curr.next == null) { // If the added element is bigger than all the elements in the list
+                    curr.next = newNode; // Add to end of list
+                }
+                else {
+                    newNode.next = curr; // Add inside the list.
+                    pred.next = newNode;
+                }
+                // 1-> 2 -> 3
+            } finally {
+                curr.unlock();
+            }
+        }
+        finally {
             pred.unlock();
         }
     }
 
-    public synchronized void remove(T t) {
-        this.head.lock();
-        Node pred = this.head;
-        Node curr = pred.next;
+    public void remove(T t) {
 
+        // Condition: The list is empty
+        this.reentrantLock.lock();
         try {
-            if(pred.data != null && pred.next != null){
-                this.head = new Node();
+            if (this.head == null) { // If list empty, return
+                return;
             }
-            else {
-                while(pred.next != null) {
+        }
+        finally {
+            this.reentrantLock.unlock();
+        }
+
+        // Condition: There is one element in list
+        Node pred = this.head;
+        this.reentrantLock.lock();
+        try {
+            if (pred.next == null && t.compareTo(pred.data) == 0) {
+                System.out.printf("NOT WORKINGGG\n pred: %s\n", pred.data);
+                pred = pred.next;
+                System.out.print(pred == null);
+                return;
+            }
+
+        } finally {
+            this.reentrantLock.unlock();
+        }
+
+        // Condition: There are two or more elements in list
+
+
+
+        pred = this.head;
+        Node curr = pred.next;
+        pred.lock();
+        try {
+            curr = pred.next;
+            curr.lock();
+
+            try {
+                while (t.compareTo(curr.data) > 0) {
+                    pred.unlock();
+                    pred = curr;
+                    curr = curr.next;
                     curr.lock();
-
-                    try {
-                        if (t.compareTo(curr.data) == 0) {
-                            pred.next = new Node();
-                            return;
-                        }
-                    }
-                    finally {
-                        curr.unlock();
-                    }
                 }
-
+                if (t.compareTo(curr.data) == 0) {
+                    pred.next = curr.next;
+                }
+            } finally {
+                curr.unlock();
             }
         } finally {
             pred.unlock();
         }
+
     }
 
     public synchronized ArrayList<T> toArrayList() {
-        ArrayList<T> list = new ArrayList();
-        if (this.head.next == null && this.head.data == null) {
-            return list;
-        }
-        Node curr;
-        for(curr = this.head; curr.next != null; curr = curr.next) {
+        ArrayList<T> list = new ArrayList<>();
+        if (this.head.next != null || this.head.data != null) {
+            Node curr;
+            for (curr = this.head; curr.next != null; curr = curr.next) {
+                list.add(curr.data);
+            }
+
             list.add(curr.data);
         }
-
-        list.add(curr.data);
-
         return list;
     }
+
 
     private class Node {
         T data;
         Node next;
-        Lock lock;
+        Lock lock = new ReentrantLock();
 
         public Node() {
             this.data = null;
