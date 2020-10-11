@@ -7,7 +7,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class FineGrainedTree<T extends Comparable<T>> implements Sorted<T> {
-    private bstNode root = null;
+    private volatile bstNode root = null;
     private ArrayList<T> arrayList;
     private final Lock bstLock = new ReentrantLock();
 
