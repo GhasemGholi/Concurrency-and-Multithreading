@@ -127,6 +127,7 @@ class SequentialTestsInteger {
             return "Add two, remove first";
         }
 
+
         @Override
         public void run() {
             this.sorted.add(1);

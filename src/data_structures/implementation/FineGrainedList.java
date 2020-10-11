@@ -9,15 +9,17 @@ import java.util.concurrent.locks.ReentrantLock;
 public class FineGrainedList<T extends Comparable<T>> implements Sorted<T> {
     private volatile Node head = null;
     private final Lock reentrantLock = new ReentrantLock();
-    private ArrayList<T> arrayList;
+
 
     public void add(T t) {
-        Node head;
+
         // Condition: Add new node to empty list
         this.reentrantLock.lock();
+        Node pred = this.head;
         try {
-            if (this.head == null) {
-                this.head = new Node(t);
+            if (pred == null) {
+                pred = new Node(t);
+                this.head = pred;
                 return;
             }
         } finally {
@@ -25,7 +27,8 @@ public class FineGrainedList<T extends Comparable<T>> implements Sorted<T> {
         }
 
         // Condition: Add node to a list with one element
-        Node pred = this.head;
+        // TODO: ReEntrant lock can be added
+        pred = this.head;
         pred.lock();
         try {
             if (pred.next == null) {
@@ -111,10 +114,9 @@ public class FineGrainedList<T extends Comparable<T>> implements Sorted<T> {
         Node pred = this.head;
         this.reentrantLock.lock();
         try {
-            if (pred.next == null && t.compareTo(pred.data) == 0) {
-                System.out.printf("NOT WORKINGGG\n pred: %s\n", pred.data);
-                pred = pred.next;
-                System.out.print(pred == null);
+            if (pred.next == null) {
+                pred = new Node();
+                this.head = pred;
                 return;
             }
 
@@ -148,20 +150,22 @@ public class FineGrainedList<T extends Comparable<T>> implements Sorted<T> {
     }
 
     public ArrayList<T> toArrayList() {
-        this.arrayList = new ArrayList<>();
-        if (this.head.next == null) {
-            this.arrayList.add(this.head.data);
-            return this.arrayList;
+        ArrayList<T> arrayList = new ArrayList<>();
+        if (this.head.next == null && this.head.data != null) {
+            arrayList.add(this.head.data);
+            return arrayList;
         }
         else if (this.head.next != null || this.head.data != null) {
             Node curr;
             for (curr = this.head; curr.next != null; curr = curr.next) {
-                this.arrayList.add(curr.data);
+                if (curr.data != null) {
+                    arrayList.add(curr.data);
+                }
             }
 
-            this.arrayList.add(curr.data);
+            arrayList.add(curr.data);
         }
-        return this.arrayList;
+        return arrayList;
     }
 
 
@@ -180,12 +184,12 @@ public class FineGrainedList<T extends Comparable<T>> implements Sorted<T> {
             this.next = null;
             this.lock = new ReentrantLock();
         }
-//
-//        public Node(T data, Node next) {
-//            this.data = data;
-//            this.next = next;
-//            this.lock = new ReentrantLock();
-//        }
+
+        public Node(T data, Node next) {
+            this.data = data;
+            this.next = next;
+            this.lock = new ReentrantLock();
+        }
 
         void lock() {
             this.lock.lock();
