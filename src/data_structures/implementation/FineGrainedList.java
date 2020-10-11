@@ -128,20 +128,23 @@ public class FineGrainedList<T extends Comparable<T>> implements Sorted<T> {
         }
 
 
+        pred = this.head;
+        pred.lock();
+        try {
+            if (t.compareTo(pred.data) == 0 && pred.next != null) { // Remove element from begninng of list
+                this.head = pred.next;
+                return;
+            }
+        } finally {
+            pred.unlock();
+        }
+
+
         // Condition: There are two or more elements in list
         pred = this.head;
         pred.lock();
         try {
             Node curr = pred.next;
-
-            // TODO: Remove this statement if you would like the code to work
-            if (t.compareTo(pred.data) == 0) { // Remove element from begninng of list
-                pred = curr;
-                this.head = pred;
-                return;
-            }
-            ////////
-
             curr.lock();
             try {
                 while (curr.next != null && t.compareTo(curr.data) > 0) {
