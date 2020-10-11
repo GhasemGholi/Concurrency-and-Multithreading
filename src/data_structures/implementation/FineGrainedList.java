@@ -75,11 +75,14 @@ public class FineGrainedList<T extends Comparable<T>> implements Sorted<T> {
                     curr = curr.next;
                     curr.lock();
                 }
-                if (t.compareTo(curr.data) == 0) { // If element already containts, return
+                Node newNode = new Node(t);
+                // TODO: Make condition for adding element to beginning of list
+                if (t.compareTo(curr.data) != 0) { // If element already containts, return
+                    newNode.next = curr; // Add inside the list.
+                    pred.next = newNode;
                     return;
                 }
 
-                Node newNode = new Node(t);
                 if (curr.next == null) { // If the added element is bigger than all the elements in the list
                     curr.next = newNode; // Add to end of list
                 }
@@ -124,11 +127,21 @@ public class FineGrainedList<T extends Comparable<T>> implements Sorted<T> {
             this.reentrantLock.unlock();
         }
 
+
         // Condition: There are two or more elements in list
         pred = this.head;
         pred.lock();
         try {
             Node curr = pred.next;
+
+            // TODO: Remove this statement if you would like the code to work
+            if (t.compareTo(pred.data) == 0) { // Remove element from begninng of list
+                pred = curr;
+                this.head = pred;
+                return;
+            }
+            ////////
+
             curr.lock();
             try {
                 while (curr.next != null && t.compareTo(curr.data) > 0) {
@@ -137,9 +150,10 @@ public class FineGrainedList<T extends Comparable<T>> implements Sorted<T> {
                     curr = curr.next;
                     curr.lock();
                 }
-                if (t.compareTo(curr.data) == 0) {
+                if (t.compareTo(curr.data) == 0) { // Remove element inside the list
                     pred.next = curr.next;
                 }
+
             } finally {
                 curr.unlock();
             }
