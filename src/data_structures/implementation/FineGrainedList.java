@@ -7,59 +7,22 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class FineGrainedList<T extends Comparable<T>> implements Sorted<T> {
-    volatile Node head = null;
-    private final Lock reentrantLock = new ReentrantLock();
+    private final Node head = new Node(); // OP constructor :D
 
     public void add(T t) {
 
         // Condition: Add new node to empty list
-        this.reentrantLock.lock();
+        this.head.lock();
+        try {
+            if (this.head.next == null) {
+                this.head.next = new Node(t);
+                return;
+            }
+        } finally {
+            this.head.unlock();
+        }
+
         Node pred = this.head;
-        try {
-            if (pred == null) {
-                pred = new Node(t);
-                this.head = pred;
-                return;
-            }
-        } finally {
-            this.reentrantLock.unlock();
-        }
-
-        // Condition: Add node to a list with one element
-        pred = this.head;
-        pred.lock();
-        try {
-            if (pred.next == null) {
-                Node newNode = new Node(t);
-                if (t.compareTo(pred.data) > 0) {
-                    pred.next = newNode;
-                    this.head = pred;
-                }
-                else {
-                    this.head = newNode;
-                    newNode.next = pred;
-                }
-                return;
-            }
-        } finally {
-            pred.unlock();
-        }
-
-        // Add to the beginning of list
-        pred = this.head;
-        pred.lock();
-        try {
-            if (t.compareTo(pred.data) < 0 && pred.next != null) { // Add to beginning of list if t is smaller than pred
-                Node newNode = new Node(t);
-                this.head = newNode;
-                newNode.next = pred.next;
-                return;
-            }
-        } finally {
-            pred.unlock();
-        }
-
-        pred = this.head;
         pred.lock();
         try {
             Node curr = pred.next;
@@ -72,19 +35,16 @@ public class FineGrainedList<T extends Comparable<T>> implements Sorted<T> {
                     curr.lock();
                 }
                 Node newNode = new Node(t);
-
                 // If the added element is bigger than all the elements in the list
-                if (curr.next == null && t.compareTo(curr.data) > 0) {
+                if (t.compareTo(curr.data) > 0) {
                     curr.next = newNode; // Add to end of list
-                    newNode.next = null;
                 }
 
                 // Add inside the list between nodes
-                else if (t.compareTo(curr.data) != 0) {
-                    newNode.next = curr;
+                else {
                     pred.next = newNode;
+                    newNode.next = curr;
                 }
-
 
             } finally {
                 curr.unlock();
@@ -99,46 +59,19 @@ public class FineGrainedList<T extends Comparable<T>> implements Sorted<T> {
     public void remove(T t) {
 
         // Condition: The list is empty
-        this.reentrantLock.lock();
+        this.head.lock();
         try {
-            if (this.head.data == null) { // If list empty, return
+            if (this.head.next == null) { // If list empty, return
                 return;
             }
         }
         finally {
-            this.reentrantLock.unlock();
+            this.head.unlock();
         }
 
-        // Condition: There is one element in list
+
+        // Condition: There elements in list
         Node pred = this.head;
-        this.reentrantLock.lock();
-        try {
-            if (pred.next == null) {
-                pred = new Node();
-                this.head = pred;
-                return;
-            }
-
-        } finally {
-            this.reentrantLock.unlock();
-        }
-
-
-        // Remove element from beginning of a full list
-        pred = this.head;
-        pred.lock();
-        try {
-            if (t.compareTo(pred.data) == 0 && pred.next != null) {
-                this.head = pred.next;
-                return;
-            }
-        } finally {
-            pred.unlock();
-        }
-
-
-        // Condition: There are two or more elements in list
-        pred = this.head;
         pred.lock();
         try {
             Node curr = pred.next;
@@ -150,10 +83,7 @@ public class FineGrainedList<T extends Comparable<T>> implements Sorted<T> {
                     curr = curr.next;
                     curr.lock();
                 }
-                if (curr.next == null && t.compareTo(curr.data) == 0) {
-                    pred.next = null;
-                }
-                else if (t.compareTo(curr.data) == 0) { // Remove element inside the list
+                if (t.compareTo(curr.data) == 0) { // Remove element inside the list
                     pred.next = curr.next;
                 }
 
@@ -180,13 +110,10 @@ public class FineGrainedList<T extends Comparable<T>> implements Sorted<T> {
             if (curr.data != null) {
                 arrayList.add(curr.data);
             }
-            return arrayList;
         }
 
         // Empty list
-        else {
-            return new ArrayList<>();
-        }
+        return arrayList;
     }
 
     private class Node {
@@ -202,7 +129,6 @@ public class FineGrainedList<T extends Comparable<T>> implements Sorted<T> {
         public Node(T data) {
             this.data = data;
             this.next = null;
-            this.lock = new ReentrantLock();
         }
 
         void lock() {
