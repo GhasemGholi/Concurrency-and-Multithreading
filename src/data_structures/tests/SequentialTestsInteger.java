@@ -8,7 +8,7 @@ class SequentialTestsInteger {
     private TestCase<?>[] allTestCases(String ds) {
         TestCase<?>[] testCases = { new Test1(ds), new Test1a(ds),
                 new Test2(ds), new Test3(ds), new Test4(ds), new Test4a(ds),
-                new Test5(ds), new Test5a(ds), new Test6(ds), new Test6a(ds), };
+                new Test5(ds), new Test5a(ds), new Test5d(ds), new Test6(ds), new Test6a(ds), };
 
         return testCases;
     }
@@ -136,6 +136,34 @@ class SequentialTestsInteger {
             this.strEqual("[2]");
         }
     }
+
+    // DEBUGGING PURPOSES
+    class Test5d extends TestCase<Integer> {
+        public Test5d(String ds) {
+            super(ds);
+        };
+
+        @Override
+        public String description() {
+            return "Add 1,2,3,4. In that order";
+        }
+
+
+        @Override
+        public void run() {
+            this.sorted.add(1);
+            this.sorted.add(2);
+            this.sorted.add(3);
+            this.sorted.remove(2);
+            this.sorted.add(4);
+            this.sorted.remove(4);
+            this.sorted.remove(1);
+            this.sorted.remove(3);
+
+            this.strEqual("[]");
+        }
+    }
+
 
     class Test5a extends TestCase<Integer> {
         public Test5a(String ds) {
